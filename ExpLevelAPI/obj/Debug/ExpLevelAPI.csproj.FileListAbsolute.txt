@@ -1,0 +1,7 @@
+c:\users\t7051015\source\repos\ExpLevelAPI\ExpLevelAPI\bin\Debug\ExpLevelAPI.exe.config
+c:\users\t7051015\source\repos\ExpLevelAPI\ExpLevelAPI\bin\Debug\ExpLevelAPI.exe
+c:\users\t7051015\source\repos\ExpLevelAPI\ExpLevelAPI\bin\Debug\ExpLevelAPI.pdb
+c:\users\t7051015\source\repos\ExpLevelAPI\ExpLevelAPI\obj\Debug\ExpLevelAPI.csprojAssemblyReference.cache
+c:\users\t7051015\source\repos\ExpLevelAPI\ExpLevelAPI\obj\Debug\ExpLevelAPI.csproj.CoreCompileInputs.cache
+c:\users\t7051015\source\repos\ExpLevelAPI\ExpLevelAPI\obj\Debug\ExpLevelAPI.exe
+c:\users\t7051015\source\repos\ExpLevelAPI\ExpLevelAPI\obj\Debug\ExpLevelAPI.pdb
