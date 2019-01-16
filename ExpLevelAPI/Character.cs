@@ -14,7 +14,7 @@ namespace ExpLevelAPI
         {
             get
             {
-                return FormulaCalc();
+                return FormulaCalc(-1);
             }
             set
             {
@@ -82,8 +82,8 @@ namespace ExpLevelAPI
             return (long)rpnStack.Pop();
         }
 
-        //calculates level from formula passed into constructor
-        private long FormulaCalc()
+        //calculates level from formula passed into constructor. If less than 0 is passed in, it calculates from current experience
+        public long FormulaCalc(int exp)
         {
             //Shunting-yard algorithm
             Queue<string> outputQueue = new Queue<string>();
@@ -94,7 +94,14 @@ namespace ExpLevelAPI
                 //if token is a number, push it to output queue
                 if (i.ToLower() == "experience" || i.ToLower() == "exp")
                 {
-                    outputQueue.Enqueue(Experience.ToString());
+                    if(exp < 0)
+                    {
+                        outputQueue.Enqueue(Experience.ToString());
+                    }
+                    else
+                    {
+                        outputQueue.Enqueue(exp.ToString());
+                    }
                 }
                 else if (double.TryParse(i, out double n))
                 {
@@ -172,7 +179,6 @@ namespace ExpLevelAPI
             return RPNCalculator(outputQueue);
         }
 
-
         //TODO:: DOES NOT WORK
         //calculates how much exp is needed for a level that is passed in
         public long GetLevelExp(long lvl)
@@ -210,11 +216,11 @@ namespace ExpLevelAPI
                     {
                         operatorStack.Push("+");
                     }
-                    
+
                 }
                 else if (i == "/" || i == "*")
                 {
-                    while (operatorStack.Count != 0 && (operatorStack.Peek() == "^" || operatorStack.Peek() == "/" || operatorStack.Peek() == "root" || operatorStack.Peek() == "*" 
+                    while (operatorStack.Count != 0 && (operatorStack.Peek() == "^" || operatorStack.Peek() == "/" || operatorStack.Peek() == "root" || operatorStack.Peek() == "*"
                         && operatorStack.Peek() != "("))
                     {
                         outputQueue.Enqueue(operatorStack.Pop());
@@ -285,6 +291,36 @@ namespace ExpLevelAPI
             }
 
             return RPNCalculator(outputQueue);
+        }
+
+        //TODO:: Returns exp needed for next level
+        public long GetNextLevelExp()
+        {
+            return 0;
+        }
+
+        //TODO:: Returns percentual experience progress between last and next level up
+        public float GetProgressToNextLevel()
+        {
+            return 0;
+        }
+
+        //TODO:: Returns experience delta between current exp and passed in level
+        public long GetExpDelta(int lvl)
+        {
+            return 0;
+        }
+
+        //Adds experience. Subtracts if minus number entered
+        public void AddExp(long exp)
+        {
+            Experience += exp;
+        }
+
+        //TODO:: Resets exp to last level up
+        public void ResetExp()
+        {
+
         }
     }
 }
