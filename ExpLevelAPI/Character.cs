@@ -178,19 +178,20 @@ namespace ExpLevelAPI
         public long GetLevelExp(long lvl)
         {
             //Shunting-yard algorithm
-            Queue<string> outputQueue = new Queue<string>();
+            List<string> outputQueue = new List<string>();
             Stack<string> operatorStack = new Stack<string>();
+            List<string> multDivQueue = new List<string>();
 
             for (int i = 0; i < formula.Count; i++)
             {
                 //if token is a number, push it to output queue
                 if (formula[i].ToLower() == "experience" || formula[i].ToLower() == "exp")
                 {
-                    outputQueue.Enqueue(lvl.ToString());
+                    outputQueue.Insert(0, lvl.ToString());
                 }
                 else if (double.TryParse(formula[i], out double n))
                 {
-                    outputQueue.Enqueue(formula[i]);
+                    outputQueue.Insert(0, formula[i]);
                 }
                 //if token is an operator, push it to operator stack
                 else if (formula[i] == "+" || formula[i] == "-")
@@ -199,7 +200,7 @@ namespace ExpLevelAPI
                     while (operatorStack.Count != 0 && (operatorStack.Peek() == "^" || operatorStack.Peek() == "root"
                         || operatorStack.Peek() == "+" || operatorStack.Peek() == "-" && operatorStack.Peek() != "("))
                     {
-                        outputQueue.Enqueue(operatorStack.Pop());
+                        outputQueue.Insert(0, operatorStack.Pop());
                     }
 
                     if (formula[i] == "+")
@@ -214,35 +215,32 @@ namespace ExpLevelAPI
                 }
                 else if (formula[i] == "/" || formula[i] == "*")
                 {
-                    //while (operatorStack.Count != 0 && (operatorStack.Peek() == "^" || operatorStack.Peek() == "/" || operatorStack.Peek() == "root" || operatorStack.Peek() == "*" 
-                    //    && operatorStack.Peek() != "("))
-                    //{
-                    //    outputQueue.Enqueue(operatorStack.Pop());
-                    //}
-
-                    for (int j = 0; j < outputQueue.Count; j++)
+                    while (operatorStack.Count != 0 && (operatorStack.Peek() == "^" || operatorStack.Peek() == "/" || operatorStack.Peek() == "root" || operatorStack.Peek() == "*"
+                        && operatorStack.Peek() != "("))
                     {
-                        if (double.TryParse(j, out double a))
-                        {
-                            if (formula[i] == "/")
-                            {
-                                outputQueue.ElementAt(j) = (Convert.ToDouble(outputQueue[j]) * Convert.ToDouble(formula[i + 1])).ToString();
-                            }
-                            else
-                            {
-                                outputQueue.ElementAt(j) = (Convert.ToDouble(outputQueue[j]) / Convert.ToDouble(formula[i + 1])).ToString();
-                            }
-                            i++;
-                        }
+                        outputQueue.Insert(0, operatorStack.Pop());
+                    }
+
+                    if (formula[i - 1].ToLower() == "exp" || formula[i - 1].ToLower() == "experience" || formula[i + 1].ToLower() == "exp" || formula[i + 1].ToLower() == "experience")
+                    {
+                        //multDivQueue.Insert(multDivQueue.Count, formula[i]);
+                        //multDivQueue.Insert(multDivQueue.Count, formula[i + 1]);
+                        //i++;
+
+                        operatorStack.Push(formula[i]);
+                    }
+                    else
+                    {
+                        operatorStack.Push(formula[i]);
                     }
                 }
                 else if (formula[i] == "root" || formula[i] == "^")
                 {
                     while (operatorStack.Count != 0 && (operatorStack.Peek() != "("))
                     {
-                        outputQueue.Enqueue(operatorStack.Pop());
+                        outputQueue.Insert(0, operatorStack.Pop());
                     }
-                        operatorStack.Push(formula[i]);
+                    operatorStack.Push(formula[i]);
                 }
                 //if token is left bracket, push to operator stack
                 else if (formula[i] == "(")
@@ -255,7 +253,7 @@ namespace ExpLevelAPI
                     //while operator at top of sack is not left bracket, pop operator from operator stack to output queue
                     while (operatorStack.Count != 0 && operatorStack.Peek() != "(")
                     {
-                        outputQueue.Enqueue(operatorStack.Pop());
+                        outputQueue.Insert(0, operatorStack.Pop());
                     }
                     //check for mismatched brackets and pop left bracket from stack
                     if (operatorStack.Count != 0 && operatorStack.Peek() == "(")
@@ -277,13 +275,61 @@ namespace ExpLevelAPI
             {
                 throw new System.InvalidOperationException("Mismatched brackets. Please check formula input.");
             }
+
+            //while (multDivQueue.Count > 0)
+            //{
+            //    for (int i = 0; i < outputQueue.Count; i++)
+            //    {
+            //        if (double.TryParse(outputQueue.ElementAt(i), out double n))
+            //        {
+            //            if (multDivQueue.First() == "/")
+            //            {
+            //                outputQueue.Insert(i, (Convert.ToDouble(outputQueue.ElementAt(i)) * Convert.ToDouble(multDivQueue.ElementAt(1))).ToString());
+            //                outputQueue.RemoveAt(i + 1);
+            //            }
+            //            else
+            //            {
+            //                outputQueue.Insert(i, (Convert.ToDouble(outputQueue.ElementAt(i)) / Convert.ToDouble(multDivQueue.ElementAt(1))).ToString());
+            //                outputQueue.RemoveAt(i + 1);
+            //            }
+            //        }
+            //    }
+
+            //    for (int i = 2; i < multDivQueue.Count; i++)
+            //    {
+            //        if (double.TryParse(multDivQueue.ElementAt(i), out double n))
+            //        {
+            //            if (multDivQueue.First() == "/")
+            //            {
+            //                multDivQueue.Insert(i, (Convert.ToDouble(multDivQueue.ElementAt(i)) * Convert.ToDouble(multDivQueue.ElementAt(1))).ToString());
+            //                multDivQueue.RemoveAt(i + 1);
+            //            }
+            //            else
+            //            {
+            //                multDivQueue.Insert(i, (Convert.ToDouble(multDivQueue.ElementAt(i)) / Convert.ToDouble(multDivQueue.ElementAt(1))).ToString());
+            //                multDivQueue.RemoveAt(i + 1);
+            //            }
+            //        }
+            //    }
+
+            //    multDivQueue.RemoveAt(0);
+            //    multDivQueue.RemoveAt(0);
+            //}
+
             //if there are stil operators on stack, pop from operator stack onto output queue
             while (operatorStack.Count != 0)
             {
-                outputQueue.Enqueue(operatorStack.Pop());
+                outputQueue.Insert(0, operatorStack.Pop());
             }
 
-            return RPNCalculator(outputQueue);
+            Queue<string> rpnQueue = new Queue<string>();
+            while (outputQueue.Count > 0)
+            {
+                rpnQueue.Enqueue(outputQueue[outputQueue.Count - 1]);
+                outputQueue.RemoveAt(outputQueue.Count - 1);
+            }
+
+            return RPNCalculator(rpnQueue);
         }
     }
 }
