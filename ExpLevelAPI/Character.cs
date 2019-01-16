@@ -6,71 +6,15 @@ using System.Threading.Tasks;
 
 namespace ExpLevelAPI
 {
-    //Used for calculating exp-level formula
-    enum NextOperator
-    {
-        eAdd,
-        eSubtract,
-        eTimes,
-        eDivide,
-        ePower
-    }
-
     class Character
     {
-        private string formula;
-        private NextOperator nextOperator = NextOperator.eAdd;
-
+        private List<string> formula;
         public long Experience { get; set; }
-
         public long Level
         {
             get
             {
-                long level = Experience;
-                string tempNum = "0";
-                //loops through inputted formula and calculates current level from it
-                foreach (char i in formula)
-                {
-                    switch (i)
-                    {
-                        case '+':
-                            PerformNextOperation(ref tempNum, ref level);
-                            nextOperator = NextOperator.eAdd;
-                            break;
-                        case '-':
-                            PerformNextOperation(ref tempNum, ref level);
-                            nextOperator = NextOperator.eSubtract;
-                            break;
-                        case '*':
-                            PerformNextOperation(ref tempNum, ref level);
-                            nextOperator = NextOperator.eTimes;
-                            break;
-                        case '/':
-                            PerformNextOperation(ref tempNum, ref level);
-                            nextOperator = NextOperator.eDivide;
-                            break;
-                        case '^':
-                            PerformNextOperation(ref tempNum, ref level);
-                            nextOperator = NextOperator.ePower;
-                            break;
-                        case ' ':
-                            break;
-                        default:
-                            if (char.IsDigit(i))
-                            {
-                                tempNum = tempNum + i.ToString();
-                            }
-                            else
-                            {
-                                throw new System.ArgumentException("Invalid formula. Please use only digits (0-9) and operators (+, -, /, *, ^)");
-                            }
-                            break;
-                    }
-
-                }
-                PerformNextOperation(ref tempNum, ref level);
-                return level;
+                return FormulaCalc();
             }
             set
             {
@@ -78,89 +22,144 @@ namespace ExpLevelAPI
             }
         }
 
-        //Used when calculating levels in Level getter
-        private void PerformNextOperation(ref string tempNum, ref long level)
-        {
-            if (tempNum != "0")
-            {
-                switch (nextOperator)
-                {
-                    case NextOperator.eAdd:
-                        level += Convert.ToInt64(tempNum);
-                        break;
-                    case NextOperator.eSubtract:
-                        level -= Convert.ToInt64(tempNum);
-                        break;
-                    case NextOperator.eDivide:
-                        level /= Convert.ToInt64(tempNum);
-                        break;
-                    case NextOperator.eTimes:
-                        level *= Convert.ToInt64(tempNum);
-                        break;
-                    case NextOperator.ePower:
-                        level = (long)Math.Pow(level, Convert.ToInt64(tempNum));
-                        break;
-                    default:
-                        throw new System.ArgumentException("No operator found in formula");
-                }
-
-                tempNum = "0";
-            }
-        }
-
-        //TODO:: WITH FORMULA
-        //Returns how much exp is needed for level
-        public long GetExperienceValue(long level)
-        {
-            return level * 10;
-        }
-
-        //TODO:: WITH FORMULA
-        //Returns what level character will be at with plugged in exp
-        public long GetLevelValue(long experience)
-        {
-            return experience / 10;
-        }
-
-        //TODO
-        //Returns how much exp is needed for level up
-        public long GetNextLevelUp()
-        {
-            return 0;
-        }
-
-        //TODO
-        //Returns percentage of how much progress has been made to next level
-        public float GetExpProgressToNextLevel()
-        {
-            return 0;
-        }
-
-        //TODO
-        //Returns experience delta between current exp and plugged in level
-        public long GetExpLevelDelta(long level)
-        {
-            return 0;
-        }
-
-        //To subtract, plug in a minus number
-        public void AddExperience(long exp)
-        {
-            Experience += exp;
-        }
-
-        //Resets exp to last level up
-        //TODO
-        public void ResetExp()
-        {
-
-        }
-
-        //Formula is in the form - Level = Experience "your formula here". This does not follow BIDMAS rules
-        //i.e. input "/ 10 * 3"
-        public Character(string form)
+        //"experience" or "exp" for experience variable.
+        //if using power, brackets should be used. i.e. "(", "3", "^", "2", ")"
+        public Character(List<string> form)
         {
             formula = form;
         }
+
+        //calculates level from formula passed into constructor
+        private long FormulaCalc()
+        {
+            //Shunting-yard algorithm
+            Queue<string> outputQueue = new Queue<string>();
+            Stack<string> operatorStack = new Stack<string>();
+            Stack<double> rpnStack = new Stack<double>(); //reverse polish notation stack, used for end calculation
+
+            foreach (string i in formula)
+            {
+                //if token is a number, push it to output queue
+                if (i.ToLower() == "experience" || i.ToLower() == "exp")
+                {
+                    outputQueue.Enqueue(Experience.ToString());
+                }
+                else if (double.TryParse(i, out double n))
+                {
+                    outputQueue.Enqueue(i);
+                }
+                //if token is an operator, push it to operator stack
+                else if (i == "+" || i == "-")
+                {
+                    //while there is an operator at top of stack with greater precedence or equal precedence and is left associative, and not a left bracket, pop from operator stack to output queue
+                    while (operatorStack.Count != 0 && (operatorStack.Peek() == "/" || operatorStack.Peek() == "*" || operatorStack.Peek() == "^" || operatorStack.Peek() == "+"
+                        || operatorStack.Peek() == "-" && operatorStack.Peek() != "("))
+                    {
+                        outputQueue.Enqueue(operatorStack.Pop());
+                    }
+
+                    operatorStack.Push(i);
+                }
+                else if (i == "/" || i == "*")
+                {
+                    while (operatorStack.Count != 0 && (operatorStack.Peek() == "^" || operatorStack.Peek() == "/" || operatorStack.Peek() == "*" && operatorStack.Peek() != "("))
+                    {
+                        outputQueue.Enqueue(operatorStack.Pop());
+                    }
+
+                    operatorStack.Push(i);
+                }
+                else if (i == "^")
+                {
+                    while (operatorStack.Count != 0 && (operatorStack.Peek() != "("))
+                    {
+                        outputQueue.Enqueue(operatorStack.Pop());
+                    }
+
+                    operatorStack.Push(i);
+                }
+                //if token is left bracket, push to operator stack
+                else if (i == "(")
+                {
+                    operatorStack.Push(i);
+                }
+                //if token is right bracket...
+                else if (i == ")")
+                {
+                    //while operator at top of sack is not left bracket, pop operator from operator stack to output queue
+                    while (operatorStack.Count != 0 && operatorStack.Peek() != "(")
+                    {
+                        outputQueue.Enqueue(operatorStack.Pop());
+                    }
+                    //check for mismatched brackets and pop left bracket from stack
+                    if (operatorStack.Count != 0 && operatorStack.Peek() == "(")
+                    {
+                        operatorStack.Pop();
+                    }
+                    else
+                    {
+                        throw new System.InvalidOperationException("Mismatched brackets. Please check formula input.");
+                    }
+                }
+                else
+                {
+                    throw new System.InvalidOperationException($"You cannot input '{i}' to the formula. Please check formula input.");
+                }
+            }
+            //if operator on top of stack is bracket, mismatched brackets
+            if(operatorStack.Peek() == "(" || operatorStack.Peek() == ")")
+            {
+                throw new System.InvalidOperationException("Mismatched brackets. Please check formula input.");
+            }
+            //if there are stil operators on stack, pop from operator stack onto output queue
+            while (operatorStack.Count != 0)
+            {
+                outputQueue.Enqueue(operatorStack.Pop());
+            }
+
+            //reverse polish notation calculation
+            foreach (string i in outputQueue)
+            {
+                double popNum = 0;
+                //if number, push to stack
+                if (double.TryParse(i, out double n))
+                {
+                    rpnStack.Push(Convert.ToDouble(i));
+                }
+                //if operator, pop values from stack, perform operation on those values and push back result
+                else if (i == "+")
+                {
+                    rpnStack.Push(rpnStack.Pop() + rpnStack.Pop());
+                }
+                else if (i == "-")
+                {
+                    popNum = rpnStack.Pop();
+                    rpnStack.Push(rpnStack.Pop() - popNum);
+                }
+                else if (i == "*")
+                {
+                    popNum = rpnStack.Pop();
+                    rpnStack.Push(rpnStack.Pop() * popNum);
+                }
+                else if (i == "/")
+                {
+                    popNum = rpnStack.Pop();
+                    rpnStack.Push(rpnStack.Pop() / popNum);
+                }
+                else if (i == "^")
+                {
+                    popNum = rpnStack.Pop();
+                    rpnStack.Push(Math.Pow(rpnStack.Pop(), popNum));
+                }
+            }
+            //if formula inputted wrong, rpnStack might end up with more than 1 value left
+            if(rpnStack.Count > 1)
+            {
+                throw new System.InvalidOperationException("Too many values left in stack. Please check formula input.");
+            }
+            return (long)rpnStack.Pop();
+        }
+
+
     }
 }
