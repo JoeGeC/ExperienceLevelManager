@@ -181,28 +181,28 @@ namespace ExpLevelAPI
             Queue<string> outputQueue = new Queue<string>();
             Stack<string> operatorStack = new Stack<string>();
 
-            foreach (string i in formula)
+            for (int i = 0; i < formula.Count; i++)
             {
                 //if token is a number, push it to output queue
-                if (i.ToLower() == "experience" || i.ToLower() == "exp")
+                if (formula[i].ToLower() == "experience" || formula[i].ToLower() == "exp")
                 {
                     outputQueue.Enqueue(lvl.ToString());
                 }
-                else if (double.TryParse(i, out double n))
+                else if (double.TryParse(formula[i], out double n))
                 {
-                    outputQueue.Enqueue(i);
+                    outputQueue.Enqueue(formula[i]);
                 }
                 //if token is an operator, push it to operator stack
-                else if (i == "+" || i == "-")
+                else if (formula[i] == "+" || formula[i] == "-")
                 {
                     //while there is an operator at top of stack with greater precedence or equal precedence and is left associative, and not a left bracket, pop from operator stack to output queue
-                    while (operatorStack.Count != 0 && (operatorStack.Peek() == "/" || operatorStack.Peek() == "*" || operatorStack.Peek() == "^" || operatorStack.Peek() == "root"
+                    while (operatorStack.Count != 0 && (operatorStack.Peek() == "^" || operatorStack.Peek() == "root"
                         || operatorStack.Peek() == "+" || operatorStack.Peek() == "-" && operatorStack.Peek() != "("))
                     {
                         outputQueue.Enqueue(operatorStack.Pop());
                     }
 
-                    if (i == "+")
+                    if (formula[i] == "+")
                     {
                         operatorStack.Push("-");
                     }
@@ -212,46 +212,45 @@ namespace ExpLevelAPI
                     }
                     
                 }
-                else if (i == "/" || i == "*")
+                else if (formula[i] == "/" || formula[i] == "*")
                 {
-                    while (operatorStack.Count != 0 && (operatorStack.Peek() == "^" || operatorStack.Peek() == "/" || operatorStack.Peek() == "root" || operatorStack.Peek() == "*" 
-                        && operatorStack.Peek() != "("))
-                    {
-                        outputQueue.Enqueue(operatorStack.Pop());
-                    }
+                    //while (operatorStack.Count != 0 && (operatorStack.Peek() == "^" || operatorStack.Peek() == "/" || operatorStack.Peek() == "root" || operatorStack.Peek() == "*" 
+                    //    && operatorStack.Peek() != "("))
+                    //{
+                    //    outputQueue.Enqueue(operatorStack.Pop());
+                    //}
 
-                    if (i == "/")
+                    for (int j = 0; j < outputQueue.Count; j++)
                     {
-                        operatorStack.Push("*");
-                    }
-                    else
-                    {
-                        operatorStack.Push("/");
+                        if (double.TryParse(j, out double a))
+                        {
+                            if (formula[i] == "/")
+                            {
+                                outputQueue.ElementAt(j) = (Convert.ToDouble(outputQueue[j]) * Convert.ToDouble(formula[i + 1])).ToString();
+                            }
+                            else
+                            {
+                                outputQueue.ElementAt(j) = (Convert.ToDouble(outputQueue[j]) / Convert.ToDouble(formula[i + 1])).ToString();
+                            }
+                            i++;
+                        }
                     }
                 }
-                else if (operatorStack.Peek() == "root" || i == "^")
+                else if (formula[i] == "root" || formula[i] == "^")
                 {
                     while (operatorStack.Count != 0 && (operatorStack.Peek() != "("))
                     {
                         outputQueue.Enqueue(operatorStack.Pop());
                     }
-
-                    if (i == "root")
-                    {
-                        operatorStack.Push("^");
-                    }
-                    else
-                    {
-                        operatorStack.Push("root");
-                    }
+                        operatorStack.Push(formula[i]);
                 }
                 //if token is left bracket, push to operator stack
-                else if (i == "(")
+                else if (formula[i] == "(")
                 {
-                    operatorStack.Push(i);
+                    operatorStack.Push(formula[i]);
                 }
                 //if token is right bracket...
-                else if (i == ")")
+                else if (formula[i] == ")")
                 {
                     //while operator at top of sack is not left bracket, pop operator from operator stack to output queue
                     while (operatorStack.Count != 0 && operatorStack.Peek() != "(")
@@ -270,7 +269,7 @@ namespace ExpLevelAPI
                 }
                 else
                 {
-                    throw new System.InvalidOperationException($"You cannot input '{i}' to the formula. Please check formula input.");
+                    throw new System.InvalidOperationException($"You cannot input '{formula[i]}' to the formula. Please check formula input.");
                 }
             }
             //if operator on top of stack is bracket, mismatched brackets
