@@ -8,13 +8,14 @@ namespace ExpLevelAPI
 {
     class Character
     {
-        private List<string> formula;
+        private List<string> lvlFormula;
+        private List<string> expFormula = new List<string>();
         public long Experience { get; set; }
         public long Level
         {
             get
             {
-                return FormulaCalc();
+                return FormulaCalc(lvlFormula);
             }
             set
             {
@@ -27,7 +28,7 @@ namespace ExpLevelAPI
         //"root" for root
         public Character(List<string> form)
         {
-            formula = form;
+            lvlFormula = form;
         }
 
         //reverse polish notation calculator
@@ -83,7 +84,7 @@ namespace ExpLevelAPI
         }
 
         //calculates level from formula passed into constructor
-        private long FormulaCalc()
+        private long FormulaCalc(List<string> formula)
         {
             //Shunting-yard algorithm
             Queue<string> outputQueue = new Queue<string>();
@@ -123,11 +124,6 @@ namespace ExpLevelAPI
                 }
                 else if (i == "^" || i == "root")
                 {
-                    while (operatorStack.Count != 0 && (operatorStack.Peek() != "("))
-                    {
-                        outputQueue.Enqueue(operatorStack.Pop());
-                    }
-
                     operatorStack.Push(i);
                 }
                 //if token is left bracket, push to operator stack
@@ -138,7 +134,7 @@ namespace ExpLevelAPI
                 //if token is right bracket...
                 else if (i == ")")
                 {
-                    //while operator at top of sack is not left bracket, pop operator from operator stack to output queue
+                    //while operator at top of stack is not left bracket, pop operator from operator stack to output queue
                     while (operatorStack.Count != 0 && operatorStack.Peek() != "(")
                     {
                         outputQueue.Enqueue(operatorStack.Pop());
@@ -172,164 +168,123 @@ namespace ExpLevelAPI
             return RPNCalculator(outputQueue);
         }
 
-
-        //TODO:: DOES NOT WORK
-        //calculates how much exp is needed for a level that is passed in
         public long GetLevelExp(long lvl)
         {
-            //Shunting-yard algorithm
-            List<string> outputQueue = new List<string>();
-            Stack<string> operatorStack = new Stack<string>();
-            List<string> multDivQueue = new List<string>();
+            return RearrangeEquation(lvl, lvlFormula);
+        }
 
-            for (int i = 0; i < formula.Count; i++)
+        //TODO:: DOES NOT WORK IF EXP IS INSIDE BRACKETS
+        //calculates how much exp is needed for a level that is passed in
+        private long RearrangeEquation(long lvl, List<string> formula, bool inBrackets = false)
+        {
+            //temp lvl formula so we can perform calculations on it without affecting original formula
+            List<string> tmpLvlFormula = formula;
+
+            //performs calculations within brackets
+            for (int i = 0; i < tmpLvlFormula.Count - 1; i++)
             {
-                //if token is a number, push it to output queue
-                if (formula[i].ToLower() == "experience" || formula[i].ToLower() == "exp")
+                if(tmpLvlFormula[i] == "(")
                 {
-                    outputQueue.Insert(0, lvl.ToString());
-                }
-                else if (double.TryParse(formula[i], out double n))
-                {
-                    outputQueue.Insert(0, formula[i]);
-                }
-                //if token is an operator, push it to operator stack
-                else if (formula[i] == "+" || formula[i] == "-")
-                {
-                    //while there is an operator at top of stack with greater precedence or equal precedence and is left associative, and not a left bracket, pop from operator stack to output queue
-                    while (operatorStack.Count != 0 && (operatorStack.Peek() == "^" || operatorStack.Peek() == "root"
-                        || operatorStack.Peek() == "+" || operatorStack.Peek() == "-" && operatorStack.Peek() != "("))
+                    int brackCount = 1;
+                    for (int j = i + 1; j < tmpLvlFormula.Count - 1; j++)
                     {
-                        outputQueue.Insert(0, operatorStack.Pop());
+                        if (tmpLvlFormula[j] == "(")
+                            brackCount++;
+                        else if (tmpLvlFormula[j] == ")")
+                        {
+                            brackCount--;
+                            if (brackCount == 0)
+                            {
+                                List<string> bracketFormula = new List<string>();
+                                tmpLvlFormula.RemoveAt(i);
+                                for(int k = i; k < j - 1; k++)
+                                {
+                                    bracketFormula.Insert(bracketFormula.Count, tmpLvlFormula[i]);
+                                    tmpLvlFormula.RemoveAt(i);
+                                }
+                                tmpLvlFormula.RemoveAt(i);
+                                tmpLvlFormula.Insert(i, RearrangeEquation(Convert.ToInt64(bracketFormula[0]), bracketFormula, true).ToString());
+                                expFormula.Clear();
+                            }
+                        }
                     }
+                }
+            }
 
-                    if (formula[i] == "+")
+            expFormula.Insert(0, lvl.ToString()); //insert lvl value at start of formula
+
+            for (int i = tmpLvlFormula.Count - 1; i > 0; i--)
+            {
+                if (tmpLvlFormula[i] == "+" || tmpLvlFormula[i] == "-")
+                {
+                    if(inBrackets)
                     {
-                        operatorStack.Push("-");
+                        expFormula.Insert(expFormula.Count, tmpLvlFormula[i]);
+                        expFormula.Insert(expFormula.Count, tmpLvlFormula[i + 1]);
                     }
                     else
                     {
-                        operatorStack.Push("+");
+                        switch(tmpLvlFormula[i])
+                        {
+                            case ("+"):
+                                expFormula.Insert(expFormula.Count, "-");
+                                break;
+                            case ("-"):
+                                expFormula.Insert(expFormula.Count, "+");
+                                break;
+                            default:
+                                throw new System.InvalidOperationException("i does not equal '-' or '+'.");
+                        }
+                        expFormula.Insert(expFormula.Count, tmpLvlFormula[i + 1]);
                     }
-                    
                 }
-                else if (formula[i] == "/" || formula[i] == "*")
+                else if(tmpLvlFormula[i] == "/" || tmpLvlFormula[i] == "*" || lvlFormula[i] == "^" || lvlFormula[i] == "root")
                 {
-                    while (operatorStack.Count != 0 && (operatorStack.Peek() == "^" || operatorStack.Peek() == "/" || operatorStack.Peek() == "root" || operatorStack.Peek() == "*"
-                        && operatorStack.Peek() != "("))
+                    //if connected to exp, insert into new formula and calculate against whole equation
+                    if(tmpLvlFormula[i - 1].ToLower() == "exp" || tmpLvlFormula[i - 1].ToLower() == "experience")
                     {
-                        outputQueue.Insert(0, operatorStack.Pop());
+                        expFormula.Insert(0, "(");
+                        expFormula.Insert(expFormula.Count, ")");
+                        switch(tmpLvlFormula[i])
+                        {
+                            case ("/"):
+                                expFormula.Insert(expFormula.Count, "*");
+                                break;
+                            case ("*"):
+                                expFormula.Insert(expFormula.Count, "/");
+                                break;
+                            case ("^"):
+                                expFormula.Insert(expFormula.Count, "root");
+                                break;
+                            case ("root"):
+                                expFormula.Insert(expFormula.Count, "^");
+                                break;
+                        }                        
+                        expFormula.Insert(expFormula.Count, tmpLvlFormula[i + 1]);
                     }
-
-                    if (formula[i - 1].ToLower() == "exp" || formula[i - 1].ToLower() == "experience" || formula[i + 1].ToLower() == "exp" || formula[i + 1].ToLower() == "experience")
-                    {
-                        //multDivQueue.Insert(multDivQueue.Count, formula[i]);
-                        //multDivQueue.Insert(multDivQueue.Count, formula[i + 1]);
-                        //i++;
-
-                        operatorStack.Push(formula[i]);
-                    }
+                    //if not connected to exp, do calculation now
                     else
                     {
-                        operatorStack.Push(formula[i]);
+                        switch (tmpLvlFormula[i])
+                        {
+                            case ("/"):
+                                tmpLvlFormula[i - 1] = (Convert.ToDouble(tmpLvlFormula[i - 1]) / Convert.ToDouble(tmpLvlFormula[i + 1])).ToString();
+                                break;
+                            case ("*"):
+                                tmpLvlFormula[i - 1] = (Convert.ToDouble(tmpLvlFormula[i - 1]) * Convert.ToDouble(tmpLvlFormula[i + 1])).ToString();
+                                break;
+                            case ("^"):
+                                tmpLvlFormula[i - 1] = (Math.Pow(Convert.ToDouble(tmpLvlFormula[i - 1]), Convert.ToDouble(tmpLvlFormula[i + 1]))).ToString();
+                                break;
+                            case ("root"):
+                                tmpLvlFormula[i - 1] = (Math.Pow(Convert.ToDouble(tmpLvlFormula[i - 1]), 1 / Convert.ToDouble(tmpLvlFormula[i + 1]))).ToString();
+                                break;
+                        }
                     }
-                }
-                else if (formula[i] == "root" || formula[i] == "^")
-                {
-                    while (operatorStack.Count != 0 && (operatorStack.Peek() != "("))
-                    {
-                        outputQueue.Insert(0, operatorStack.Pop());
-                    }
-                    operatorStack.Push(formula[i]);
-                }
-                //if token is left bracket, push to operator stack
-                else if (formula[i] == "(")
-                {
-                    operatorStack.Push(formula[i]);
-                }
-                //if token is right bracket...
-                else if (formula[i] == ")")
-                {
-                    //while operator at top of sack is not left bracket, pop operator from operator stack to output queue
-                    while (operatorStack.Count != 0 && operatorStack.Peek() != "(")
-                    {
-                        outputQueue.Insert(0, operatorStack.Pop());
-                    }
-                    //check for mismatched brackets and pop left bracket from stack
-                    if (operatorStack.Count != 0 && operatorStack.Peek() == "(")
-                    {
-                        operatorStack.Pop();
-                    }
-                    else
-                    {
-                        throw new System.InvalidOperationException("Mismatched brackets. Please check formula input.");
-                    }
-                }
-                else
-                {
-                    throw new System.InvalidOperationException($"You cannot input '{formula[i]}' to the formula. Please check formula input.");
                 }
             }
-            //if operator on top of stack is bracket, mismatched brackets
-            if (operatorStack.Peek() == "(" || operatorStack.Peek() == ")")
-            {
-                throw new System.InvalidOperationException("Mismatched brackets. Please check formula input.");
-            }
 
-            //while (multDivQueue.Count > 0)
-            //{
-            //    for (int i = 0; i < outputQueue.Count; i++)
-            //    {
-            //        if (double.TryParse(outputQueue.ElementAt(i), out double n))
-            //        {
-            //            if (multDivQueue.First() == "/")
-            //            {
-            //                outputQueue.Insert(i, (Convert.ToDouble(outputQueue.ElementAt(i)) * Convert.ToDouble(multDivQueue.ElementAt(1))).ToString());
-            //                outputQueue.RemoveAt(i + 1);
-            //            }
-            //            else
-            //            {
-            //                outputQueue.Insert(i, (Convert.ToDouble(outputQueue.ElementAt(i)) / Convert.ToDouble(multDivQueue.ElementAt(1))).ToString());
-            //                outputQueue.RemoveAt(i + 1);
-            //            }
-            //        }
-            //    }
-
-            //    for (int i = 2; i < multDivQueue.Count; i++)
-            //    {
-            //        if (double.TryParse(multDivQueue.ElementAt(i), out double n))
-            //        {
-            //            if (multDivQueue.First() == "/")
-            //            {
-            //                multDivQueue.Insert(i, (Convert.ToDouble(multDivQueue.ElementAt(i)) * Convert.ToDouble(multDivQueue.ElementAt(1))).ToString());
-            //                multDivQueue.RemoveAt(i + 1);
-            //            }
-            //            else
-            //            {
-            //                multDivQueue.Insert(i, (Convert.ToDouble(multDivQueue.ElementAt(i)) / Convert.ToDouble(multDivQueue.ElementAt(1))).ToString());
-            //                multDivQueue.RemoveAt(i + 1);
-            //            }
-            //        }
-            //    }
-
-            //    multDivQueue.RemoveAt(0);
-            //    multDivQueue.RemoveAt(0);
-            //}
-
-            //if there are stil operators on stack, pop from operator stack onto output queue
-            while (operatorStack.Count != 0)
-            {
-                outputQueue.Insert(0, operatorStack.Pop());
-            }
-
-            Queue<string> rpnQueue = new Queue<string>();
-            while (outputQueue.Count > 0)
-            {
-                rpnQueue.Enqueue(outputQueue[outputQueue.Count - 1]);
-                outputQueue.RemoveAt(outputQueue.Count - 1);
-            }
-
-            return RPNCalculator(rpnQueue);
+            return FormulaCalc(expFormula);
         }
     }
 }
