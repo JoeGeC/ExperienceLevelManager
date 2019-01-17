@@ -8,13 +8,14 @@ namespace ExpLevelAPI
 {
     class Character
     {
-        private List<string> formula;
+        private List<string> lvlFormula;
+        private List<string> expFormula = new List<string>();
         public long Experience { get; set; }
         public long Level
         {
             get
             {
-                return FormulaCalc(-1);
+                return FormulaCalc(lvlFormula);
             }
             set
             {
@@ -27,7 +28,7 @@ namespace ExpLevelAPI
         //"root" for root
         public Character(List<string> form)
         {
-            formula = form;
+            lvlFormula = form;
         }
 
         //reverse polish notation calculator
@@ -82,8 +83,8 @@ namespace ExpLevelAPI
             return (long)rpnStack.Pop();
         }
 
-        //calculates level from formula passed into constructor. If less than 0 is passed in, it calculates from current experience
-        public long FormulaCalc(int exp)
+        //calculates level from formula passed into constructor
+        private long FormulaCalc(List<string> formula, long lvl = 0)
         {
             //Shunting-yard algorithm
             Queue<string> outputQueue = new Queue<string>();
@@ -94,14 +95,11 @@ namespace ExpLevelAPI
                 //if token is a number, push it to output queue
                 if (i.ToLower() == "experience" || i.ToLower() == "exp")
                 {
-                    if(exp < 0)
-                    {
-                        outputQueue.Enqueue(Experience.ToString());
-                    }
-                    else
-                    {
-                        outputQueue.Enqueue(exp.ToString());
-                    }
+                    outputQueue.Enqueue(Experience.ToString());
+                }
+                else if(i == "lvl")
+                {
+                    outputQueue.Enqueue(lvl.ToString());
                 }
                 else if (double.TryParse(i, out double n))
                 {
@@ -130,11 +128,6 @@ namespace ExpLevelAPI
                 }
                 else if (i == "^" || i == "root")
                 {
-                    while (operatorStack.Count != 0 && (operatorStack.Peek() != "("))
-                    {
-                        outputQueue.Enqueue(operatorStack.Pop());
-                    }
-
                     operatorStack.Push(i);
                 }
                 //if token is left bracket, push to operator stack
@@ -145,7 +138,7 @@ namespace ExpLevelAPI
                 //if token is right bracket...
                 else if (i == ")")
                 {
-                    //while operator at top of sack is not left bracket, pop operator from operator stack to output queue
+                    //while operator at top of stack is not left bracket, pop operator from operator stack to output queue
                     while (operatorStack.Count != 0 && operatorStack.Peek() != "(")
                     {
                         outputQueue.Enqueue(operatorStack.Pop());
@@ -178,137 +171,135 @@ namespace ExpLevelAPI
 
             return RPNCalculator(outputQueue);
         }
-
-        //TODO:: DOES NOT WORK
-        //calculates how much exp is needed for a level that is passed in
         public long GetLevelExp(long lvl)
         {
-            //Shunting-yard algorithm
-            Queue<string> outputQueue = new Queue<string>();
-            Stack<string> operatorStack = new Stack<string>();
-
-            foreach (string i in formula)
-            {
-                //if token is a number, push it to output queue
-                if (i.ToLower() == "experience" || i.ToLower() == "exp")
-                {
-                    outputQueue.Enqueue(lvl.ToString());
-                }
-                else if (double.TryParse(i, out double n))
-                {
-                    outputQueue.Enqueue(i);
-                }
-                //if token is an operator, push it to operator stack
-                else if (i == "+" || i == "-")
-                {
-                    //while there is an operator at top of stack with greater precedence or equal precedence and is left associative, and not a left bracket, pop from operator stack to output queue
-                    while (operatorStack.Count != 0 && (operatorStack.Peek() == "/" || operatorStack.Peek() == "*" || operatorStack.Peek() == "^" || operatorStack.Peek() == "root"
-                        || operatorStack.Peek() == "+" || operatorStack.Peek() == "-" && operatorStack.Peek() != "("))
-                    {
-                        outputQueue.Enqueue(operatorStack.Pop());
-                    }
-
-                    if (i == "+")
-                    {
-                        operatorStack.Push("-");
-                    }
-                    else
-                    {
-                        operatorStack.Push("+");
-                    }
-
-                }
-                else if (i == "/" || i == "*")
-                {
-                    while (operatorStack.Count != 0 && (operatorStack.Peek() == "^" || operatorStack.Peek() == "/" || operatorStack.Peek() == "root" || operatorStack.Peek() == "*"
-                        && operatorStack.Peek() != "("))
-                    {
-                        outputQueue.Enqueue(operatorStack.Pop());
-                    }
-
-                    if (i == "/")
-                    {
-                        operatorStack.Push("*");
-                    }
-                    else
-                    {
-                        operatorStack.Push("/");
-                    }
-                }
-                else if (operatorStack.Peek() == "root" || i == "^")
-                {
-                    while (operatorStack.Count != 0 && (operatorStack.Peek() != "("))
-                    {
-                        outputQueue.Enqueue(operatorStack.Pop());
-                    }
-
-                    if (i == "root")
-                    {
-                        operatorStack.Push("^");
-                    }
-                    else
-                    {
-                        operatorStack.Push("root");
-                    }
-                }
-                //if token is left bracket, push to operator stack
-                else if (i == "(")
-                {
-                    operatorStack.Push(i);
-                }
-                //if token is right bracket...
-                else if (i == ")")
-                {
-                    //while operator at top of sack is not left bracket, pop operator from operator stack to output queue
-                    while (operatorStack.Count != 0 && operatorStack.Peek() != "(")
-                    {
-                        outputQueue.Enqueue(operatorStack.Pop());
-                    }
-                    //check for mismatched brackets and pop left bracket from stack
-                    if (operatorStack.Count != 0 && operatorStack.Peek() == "(")
-                    {
-                        operatorStack.Pop();
-                    }
-                    else
-                    {
-                        throw new System.InvalidOperationException("Mismatched brackets. Please check formula input.");
-                    }
-                }
-                else
-                {
-                    throw new System.InvalidOperationException($"You cannot input '{i}' to the formula. Please check formula input.");
-                }
-            }
-            //if operator on top of stack is bracket, mismatched brackets
-            if (operatorStack.Peek() == "(" || operatorStack.Peek() == ")")
-            {
-                throw new System.InvalidOperationException("Mismatched brackets. Please check formula input.");
-            }
-            //if there are stil operators on stack, pop from operator stack onto output queue
-            while (operatorStack.Count != 0)
-            {
-                outputQueue.Enqueue(operatorStack.Pop());
-            }
-
-            return RPNCalculator(outputQueue);
+            if (expFormula.Count == 0)
+                return RearrangeEquation(lvl, lvlFormula);
+            else
+                return FormulaCalc(expFormula, lvl);
         }
 
-        //TODO:: Returns exp needed for next level
+        //TODO:: DOES NOT WORK IF EXP IS INSIDE BRACKETS
+        //calculates how much exp is needed for a level that is passed in
+        private long RearrangeEquation(long lvl, List<string> formula) //TODO:: REMOVE BOOL
+        {
+            //temp lvl formula so we can perform calculations on it without affecting original formula
+            List<string> tmpLvlFormula = formula.ToList();
+
+            //performs calculations within brackets
+            for (int i = 0; i < tmpLvlFormula.Count - 1; i++)
+            {
+                if(tmpLvlFormula[i] == "(")
+                {
+                    int brackCount = 1;
+                    for (int j = i + 1; j < tmpLvlFormula.Count - 1; j++)
+                    {
+                        if (tmpLvlFormula[j] == "(")
+                            brackCount++;
+                        else if (tmpLvlFormula[j] == ")")
+                        {
+                            brackCount--;
+                            if (brackCount == 0)
+                            {
+                                List<string> bracketFormula = new List<string>();
+                                tmpLvlFormula.RemoveAt(i);
+                                for(int k = i; k < j - 1; k++)
+                                {
+                                    bracketFormula.Insert(bracketFormula.Count, tmpLvlFormula[i]);
+                                    tmpLvlFormula.RemoveAt(i);
+                                }
+                                tmpLvlFormula.RemoveAt(i);
+                                tmpLvlFormula.Insert(i, FormulaCalc(bracketFormula).ToString());
+                                expFormula.Clear();
+                            }
+                        }
+                    }
+                }
+            }
+
+            expFormula.Insert(0, "lvl"); //insert lvl value at start of formula
+
+            for (int i = tmpLvlFormula.Count - 1; i > 0; i--)
+            {
+                if(tmpLvlFormula[i] == "+")
+                {
+                    expFormula.Insert(expFormula.Count, "-");
+                    expFormula.Insert(expFormula.Count, tmpLvlFormula[i + 1]);
+                }
+                else if(tmpLvlFormula[i] == "-")
+                {
+                    expFormula.Insert(expFormula.Count, "+");
+                    expFormula.Insert(expFormula.Count, tmpLvlFormula[i + 1]);
+                }
+                else if(tmpLvlFormula[i] == "/" || tmpLvlFormula[i] == "*" || tmpLvlFormula[i] == "^" || tmpLvlFormula[i] == "root")
+                {
+                    //if connected to exp, insert into new formula and calculate against whole equation
+                    if(tmpLvlFormula[i - 1].ToLower() == "exp" || tmpLvlFormula[i - 1].ToLower() == "experience")
+                    {
+                        expFormula.Insert(0, "(");
+                        expFormula.Insert(expFormula.Count, ")");
+                        switch(tmpLvlFormula[i])
+                        {
+                            case ("/"):
+                                expFormula.Insert(expFormula.Count, "*");
+                                break;
+                            case ("*"):
+                                expFormula.Insert(expFormula.Count, "/");
+                                break;
+                            case ("^"):
+                                expFormula.Insert(expFormula.Count, "root");
+                                break;
+                            case ("root"):
+                                expFormula.Insert(expFormula.Count, "^");
+                                break;
+                        }                        
+                        expFormula.Insert(expFormula.Count, tmpLvlFormula[i + 1]);
+                    }
+                    //if not connected to exp, do calculation now
+                    else
+                    {
+                        switch (tmpLvlFormula[i])
+                        {
+                            case ("/"):
+                                tmpLvlFormula[i - 1] = (Convert.ToDouble(tmpLvlFormula[i - 1]) / Convert.ToDouble(tmpLvlFormula[i + 1])).ToString();
+                                break;
+                            case ("*"):
+                                tmpLvlFormula[i - 1] = (Convert.ToDouble(tmpLvlFormula[i - 1]) * Convert.ToDouble(tmpLvlFormula[i + 1])).ToString();
+                                break;
+                            case ("^"):
+                                tmpLvlFormula[i - 1] = (Math.Pow(Convert.ToDouble(tmpLvlFormula[i - 1]), Convert.ToDouble(tmpLvlFormula[i + 1]))).ToString();
+                                break;
+                            case ("root"):
+                                tmpLvlFormula[i - 1] = (Math.Pow(Convert.ToDouble(tmpLvlFormula[i - 1]), 1 / Convert.ToDouble(tmpLvlFormula[i + 1]))).ToString();
+                                break;
+                        }
+                    }
+                }
+            }
+
+            return FormulaCalc(expFormula, lvl);
+        }
+
+        //Returns exp needed for next level
         public long GetNextLevelExp()
         {
-            return 0;
+            return GetLevelExp(Level + 1) - Experience;
         }
 
-        //TODO:: Returns percentual experience progress between last and next level up
+        //Returns percentual experience progress between last and next level up
         public float GetProgressToNextLevel()
         {
-            return 0;
+            float levelDiff = GetLevelExp(Level + 1) - GetLevelExp(Level);
+            float currExp = Experience - GetLevelExp(Level);
+            Console.WriteLine("Current exp this level: " + currExp);
+            Console.WriteLine("Exp difference between current level and next: " + levelDiff);
+            return currExp / levelDiff * 100;
         }
 
-        //TODO:: Returns experience delta between current exp and passed in level
+        //Returns experience delta between current exp and passed in level
         public long GetExpDelta(int lvl)
         {
-            return 0;
+            return Experience - GetLevelExp(lvl);
         }
 
         //Adds experience. Subtracts if minus number entered
@@ -317,10 +308,10 @@ namespace ExpLevelAPI
             Experience += exp;
         }
 
-        //TODO:: Resets exp to last level up
+        //Resets exp to last level up
         public void ResetExp()
         {
-
+            Experience = GetLevelExp(Level);
         }
     }
 }
