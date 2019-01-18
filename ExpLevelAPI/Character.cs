@@ -181,7 +181,7 @@ namespace ExpLevelAPI
 
         //TODO:: DOES NOT WORK IF EXP IS INSIDE BRACKETS
         //calculates how much exp is needed for a level that is passed in
-        private long RearrangeEquation(long lvl, List<string> formula) //TODO:: REMOVE BOOL
+        private long RearrangeEquation(long lvl, List<string> formula)
         {
             //temp lvl formula so we can perform calculations on it without affecting original formula
             List<string> tmpLvlFormula = formula.ToList();
@@ -191,6 +191,7 @@ namespace ExpLevelAPI
             {
                 if(tmpLvlFormula[i] == "(")
                 {
+                    //counts brackets so it gets everything within the first bracket, including other brackets
                     int brackCount = 1;
                     for (int j = i + 1; j < tmpLvlFormula.Count; j++)
                     {
@@ -199,8 +200,9 @@ namespace ExpLevelAPI
                         else if (tmpLvlFormula[j] == ")")
                         {
                             brackCount--;
-                            if (brackCount == 0)
+                            if (brackCount == 0) //if outermost right bracket is found
                             {
+                                //creates new list with equation inside the brackets, then replaces the brackets with the result in tmpLvlFormula
                                 List<string> bracketFormula = new List<string>();
                                 tmpLvlFormula.RemoveAt(i);
                                 for(int k = i; k < j - 1; k++)
@@ -292,7 +294,7 @@ namespace ExpLevelAPI
             float levelDiff = GetLevelExp(Level + 1) - GetLevelExp(Level);
             float currExp = Experience - GetLevelExp(Level);
             Console.WriteLine("Current exp this level: " + currExp);
-            Console.WriteLine("Exp difference between current level and next: " + levelDiff);
+            Console.WriteLine("Exp diff between current level and next: " + levelDiff);
             return currExp / levelDiff * 100;
         }
 
