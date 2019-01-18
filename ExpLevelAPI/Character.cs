@@ -187,12 +187,12 @@ namespace ExpLevelAPI
             List<string> tmpLvlFormula = formula.ToList();
 
             //performs calculations within brackets
-            for (int i = 0; i < tmpLvlFormula.Count - 1; i++)
+            for (int i = 0; i < tmpLvlFormula.Count; i++)
             {
                 if(tmpLvlFormula[i] == "(")
                 {
                     int brackCount = 1;
-                    for (int j = i + 1; j < tmpLvlFormula.Count - 1; j++)
+                    for (int j = i + 1; j < tmpLvlFormula.Count; j++)
                     {
                         if (tmpLvlFormula[j] == "(")
                             brackCount++;
